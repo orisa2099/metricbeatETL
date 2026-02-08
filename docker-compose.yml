@@ -1,0 +1,69 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_DB: metricsdb
+      POSTGRES_USER: metricsuser
+      POSTGRES_PASSWORD: metricspassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - metric_net
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - metric_net
+
+  # logstash:
+  #   image: docker.elastic.co/logstash/logstash:8.11.0
+  #   container_name: logstash
+  #   ports:
+  #     - "5044:5044"   # Metricbeat → Logstash
+  #     - "9600:9600"   # Logstash monitoring API
+  #   volumes:
+  #     # - ./logstash/pipeline:/home/orisa/metricbeatETL/logstash/pipeline
+  #     # - ./logstash/config/logstash.yml:/home/orisa/metricbeatETL/logstash/config/logstash.yml
+  #     # - ./logstash/jdbc:/home/orisa/metricbeatETL/logstash/jdbc     
+  #     - ./logstash/pipeline:/usr/share/logstash/pipeline
+  #     - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+  #     - ./logstash/jdbc:/usr/share/logstash/jdbc
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - metric_net
+
+  logstash:
+    build: .
+    container_name: logstash
+    ports:
+      - "5044:5044"   # Metricbeat → Logstash
+      - "9600:9600"   # Logstash monitoring API
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./logstash/jdbc:/usr/share/logstash/jdbc
+    depends_on:
+      - postgres
+    networks:
+      - metric_net
+
+volumes:
+  postgres_data:
+
+networks:
+  metric_net:
+    driver: bridge
